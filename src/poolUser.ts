@@ -1,39 +1,8 @@
-// 해당 이벤트명을 읽음
-// pooluser에 존재하지 않을때는 insert
-// 존재하면 update
-
-/* withdraw를 한다는것은 이미 pooluser에 있다는거다. */
-
-// withdraw 일때 시작일전에 넣었다 뻇다고 생각하면
-// withdraw를 찾고 날짜가 Daydiff(시작일,withdate) > 0 이면
-// deposit에서 뺀다. 이때 deposit이 0이면
-// depositamount, date, withdrawamount, withdrawdate를 비운다
-// 이러면 pooluser에 id,pid, from을 제외하고 다 빈칸이되니까
-
-// withdraw 에서 만기에 뻇다고하면
-// withdrawamount, withdrawdate 채우고
-// depositdate, depositamount 가져오고
-// 여기서 withdrawamount 와 depositamount 가 같다면
-// 정상루트이기때문에 withdrawamount = rewardamount;를한다
-// update 한다.
-
-// * withdraw할때 일부만 빼는건 불가능하다. 한번에 다 뺀다.
-
-// select할때는 deposit이 0인걸 제외하고 찾으면된다.
-
 // 이 함수는 eventname,pid,from,txdate,amount,rewardamount,db,contract 매개변수
 import { getPoolInfo } from '../utils/Web3';
 import { convertToDate, dayDiff } from '../utils/Date';
 import { getDBPoolLength } from '../utils/DB';
 import { Contract } from 'web3-eth-contract';
-import mariadb from 'mariadb';
-const pool = mariadb.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PWD,
-  port: 3307,
-  database: 'staking-pool',
-});
 
 export const poolUser = async (
   _eventName: string,
@@ -43,7 +12,8 @@ export const poolUser = async (
   _amount: string,
   _rewardAmount: string,
   _db: any,
-  _contract: Contract
+  _contract: Contract,
+  _stakingFee: string
 ) => {
   try {
     // 해당 이벤트명을 읽음
@@ -79,6 +49,7 @@ export const poolUser = async (
       let withdrawAmount = 0;
       let withdrawDate = '-';
       let id = 0;
+      let stakingFee = '-';
       if (idLength !== undefined) {
         id = idLength;
       }
@@ -95,12 +66,12 @@ export const poolUser = async (
         // 존재할때 쿼리
 
         await _db.query(
-          `update pooluser set depositdate='${depositDate}', depositamount='${depositAmount}', withdrawdate='${withdrawDate}', withdrawamount='${withdrawAmount}', stakingfee=0 where id='${id}'`
+          `update pooluser set depositdate='${depositDate}', depositamount='${depositAmount}', withdrawdate='${withdrawDate}', withdrawamount='${withdrawAmount}', stakingfee='${stakingFee}' where id='${id}'`
         );
       } else {
         // 존재하지않을때 쿼리
         await _db.query(
-          `insert into pooluser (pid, fromaddress, depositdate, depositamount, withdrawdate, withdrawamount, stakingfee) values('${_pid}','${_fromaddress}','${depositDate}','${depositAmount}','${withdrawDate}','${withdrawAmount}','0')`
+          `insert into pooluser (pid, fromaddress, depositdate, depositamount, withdrawdate, withdrawamount, stakingfee) values('${_pid}','${_fromaddress}','${depositDate}','${depositAmount}','${withdrawDate}','${withdrawAmount}','${stakingFee}')`
         );
       }
     }
@@ -140,6 +111,7 @@ export const poolUser = async (
       let withdrawAmount: any = _amount;
       let withdrawDate = _txdate;
       let id = selectPoolUser[0].id;
+      let stakingFee = _stakingFee;
 
       if (diff > 0) {
         // 시작일전의 withdraw
@@ -160,7 +132,7 @@ export const poolUser = async (
       }
       // withdraw 공통쿼리
       await _db.query(
-        `update pooluser set depositdate='${depositDate}', depositamount='${depositAmount}', withdrawdate='${withdrawDate}', withdrawamount='${withdrawAmount}', stakingfee=0 where id='${id}'`
+        `update pooluser set depositdate='${depositDate}', depositamount='${depositAmount}', withdrawdate='${withdrawDate}', withdrawamount='${withdrawAmount}', stakingfee='${stakingFee}' where id='${id}'`
       );
     }
 

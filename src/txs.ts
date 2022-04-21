@@ -19,7 +19,6 @@ export const txsSync = async (_db: any) => {
   try {
     console.log('------Txs Sync Start-------');
     let dbTxsLength = await getDBPoolLength(_db, 'txs');
-    console.log(dbTxsLength);
     const contract = getContract();
     const arowanaDec = await arowanaDecimal();
     let pureEvent;
@@ -83,13 +82,16 @@ export const txsSync = async (_db: any) => {
       const { logs } = txInfoArray[i];
 
       let rewardAmount: any = '-';
+      let stakingFee: any = '-';
       if (eventName === 'Withdraw') {
         if (logs.length === 6) {
           // logs의 길이가 6일때
+          console.log(logs);
           rewardAmount =
             Number(decimal(logs[0].data)) +
             Number(decimal(logs[5].data)) -
             Number(decimal(logs[2].data));
+          stakingFee = decimal(logs[2].data);
         } else {
           // logs의 길이가 2일때
           rewardAmount = Number(decimal(logs[logs.length - 1].data));
@@ -109,11 +111,10 @@ export const txsSync = async (_db: any) => {
       }
 
       await _db.query(
-        `insert into txs(id,blocknumber,fromaddress,txdate,pid,amount,reward,txfee,eventname,rewardamount) values(${id},${blockNumber},'${from}','${convertToDate(
+        `insert into txs(id,blocknumber,fromaddress,txdate,pid,amount,reward,txfee,eventname,rewardamount,stakingfee) values(${id},${blockNumber},'${from}','${convertToDate(
           timestamp
-        )}','${pid}','${amount}','${reward}','${txFee}','${eventName}','${rewardAmount}')`
+        )}','${pid}','${amount}','${reward}','${txFee}','${eventName}','${rewardAmount}','${stakingFee}')`
       );
-      // 여기에 pooluser에 관한 분리된 코드 넣어야함
 
       await poolUser(
         eventName,
@@ -123,7 +124,8 @@ export const txsSync = async (_db: any) => {
         amount,
         rewardAmount,
         _db,
-        contract
+        contract,
+        stakingFee
       );
     }
     _db.end();

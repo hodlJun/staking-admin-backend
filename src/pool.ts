@@ -6,8 +6,9 @@ import {
 } from '../utils/Web3';
 import { convertToDate, dayDiff } from '../utils/Date';
 import { getDBPoolLength } from '../utils/DB';
+import { Contract } from 'web3-eth-contract';
 
-export const poolSync = async (_contract: any, _db: any) => {
+export const poolSync = async (_contract: Contract, _db: any) => {
   try {
     // mainContract
     console.log('------Pool Sync Start-------');
@@ -25,7 +26,7 @@ export const poolSync = async (_contract: any, _db: any) => {
 
     const newPoolInfoArray = await Promise.all(promiseArray);
 
-    if (!newPoolInfoArray.length) {
+    if (newPoolInfoArray.length === 0) {
       console.log('------Pool Sync End-------');
       return;
     }
@@ -50,9 +51,7 @@ export const poolSync = async (_contract: any, _db: any) => {
           dbPoolLength + i
         },'${open}','${start}','${end}',${diff},${convertCap},${convertCap},${convertFinalAmount},${convertAmount},${ratio})`
       );
-      // 쿼리에서 날짜를 넣어줄때 ' ' 로 묶어주어야 한다.
     }
-    console.log('------Pool Sync End-------');
   } catch (err) {
     console.log('Pool Sync Error: ', err);
   }
